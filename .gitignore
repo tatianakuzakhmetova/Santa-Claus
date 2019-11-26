@@ -1,0 +1,5 @@
+settings.py
+env/
+bot.log
+__pycache__/
+update_message.txt
