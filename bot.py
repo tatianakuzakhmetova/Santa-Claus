@@ -41,11 +41,17 @@ import random
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO, filename='bot.log')
+
+# Создаем глобальный слопарик с Пользовательской информацией.
+# Что делать, выбора нет! В политике Телеграмма - нет возможности сохранять данные от пользователя дольше,
+# чем случится следующее Update-событие (пришел/покинул группу новый член, кто-то написал сообщение или послал команду)
+# Пряча ключ API бота, мы гарантируем безопасность и сохранность полученных пользовательских данных. 
+all_user_data = dict()
  
 #Тело бота
 #A dict that can be used to keep any data in. For each update from the same user it will be the same dict.
 def main():
-    mybot = Updater(settings.API, request_kwargs = settings.PROXY, use_context=True)    
+    mybot = Updater(settings.API, request_kwargs = settings.PROXY)    
     
     logging.info('Bot start')
     
@@ -55,97 +61,99 @@ def main():
     # Важно! Ставьте CommandHandler выше MessageHandler, тк он перехватит команды
     # The case if the user is already in chat group, use the command '/adm'
     dp.add_handler(CommandHandler("adm", want_adm, pass_user_data=True))
+    dp.add_handler(CommandHandler("stop", stop, pass_user_data=True))
     
     # Chat text message 
-#    dp.add_handler(MessageHandler(Filters.text, talk_to_me, pass_user_data=True))
-    dp.add_handler(MessageHandler(Filters.text, talk_chat, pass_user_data=True))
+    dp.add_handler(MessageHandler(Filters.text, talk_to_me, pass_user_data=True))
 
-    
     # Starts polling updates from Telegram.
     mybot.start_polling()
     # Blocks until one of the signals are received and stops the updater.
     mybot.idle()
 
 
-def want_adm(update, context):
+def talk_to_me(bot, update, user_data):
+    if update.message.chat.type == 'group':
+        value = update.message.from_user.id
+        key = update.message.from_user.first_name
+        logging.info("The User: %s with User_id: %s wrote in Chat_id: %s,", value, key, update.message.chat.id)
+        if value not in all_user_data.values():
+            all_user_data[key] = value
+            user_text = "Hey, {}! Looks like you are newbie! Have you already done /adm command?".format(key)
+        else:      
+            user_text = "Hi, {}! We are familiar! Are you in /adm group?".format(key)
+        
+        update.message.reply_text(user_text)
+
+    
+    
+def want_adm(bot, update, user_data):
     key = update.message.from_user.first_name
     value = update.message.from_user.id
-    context.user_data[key] = value
     
-    if context.user_data:
-        logging.info("The User: %s want to play ADM, but He/She is already in", context.user_data)
-        update.message.reply_text("Hello, {}. I remember that you want me to send ADM:)". format(context.user_data))
+    if value not in all_user_data.values():
+        all_user_data[key] = value
+        logging.info("The User: %s is the first in all_user_data dict", key)
     else:
-        logging.info("The User: %s with User_id: %s want to play ADM", key, value)
+        logging.info("The User: %s is already in all_user_data dict", key)
+  
+    print (all_user_data)
     
-    context_dict(context.user_data)
-    
+    #Check Group chat member count. If some of them hadn't type /adm command, ask them to choose smth
+    chat_members = bot.get_chat_members_count(update.message.chat.id)
+    print(chat_members)
+    #One of chat_member is the Santa-Claus bot
+    if (chat_members-1) > len(all_user_data):
+        bot.send_message(update.message.chat.id, "Who didn't choose /adm command yet?")
+    elif (chat_members-1) == len(all_user_data):
+        create_adm_dict()
+   
 
-def context_dict(dict):
-    print(dict)
-    
-    
-def talk_chat(update, context):
-    if context.user_data:
-        logging.info("The User: %s was already wrote smth", context.user_data)
-        update.message.reply_text("Hello, {}. We are familiar:)". format(context.user_data))
-    else:
-        key = update.message.from_user.first_name
-        value = update.message.from_user.id
-        context.user_data[key] = value
-        logging.info("The User: %s is the first in here", context.user_data)
-        update.message.reply_text("Hello, {}. You are newbie!". format(context.user_data))
+def stop(bot, update, user_data):
+    all_user_data.clear()
+    print(all_user_data)
 
 
-def talk_to_me(bot, update, user_data):
-    button_adm = KeyboardButton('Want ADM!')
-    button_leave = KeyboardButton('Want to Leave!')
-    member_kb = ReplyKeyboardMarkup([
-                                    [button_adm],[button_leave]
-                                    ], resize_keyboard=True
-                                    )
-    update.message.reply_text('Hello everyones! Please, choose!', reply_markup=member_kb)
-#    if update.message.chat.type == 'group':
-#        if update.message.chat.title == 'Santa-Clause':
-#            print("We are in Santa-Claus Group!")
-           #     logging.info("The User: %s with User_id: %s was added to the Chat_id: %s,", update.message.from_user.first_name,  
-            #                                                                                update.message.from_user.id, update.message.chat.id)
-            #    new_chat_member = message.new_chat_participant.first_name 
-            #    print(new_chat_member)
-            #    chat_members = bot.get_chat_members_count(update.message.chat.id)
-            #    print (chat_members)
-                
-            #All types are defined in types.py. They are all completely in line with the Telegram API's definition of the types, 
-            #except for the Message's from field, which is renamed to from_user (because from is a Python reserved token)
-#            user_text = "Hello {}! You wrote: {}".format(update.message.from_user.first_name, update.message.text)
- #           logging.info("User: %s, Chat_id: %s, User_id: %s, Message: %s", update.message.from_user.first_name, update.message.chat.id, 
- #                                                                                       update.message.from_user.id, update.message.text)          
- #   else:
- #       user_text = "Hello {}! You wrote: {}".format(update.message.chat.first_name, update.message.text)
- #       logging.info("User: %s, Chat_id: %s, Message: %s", update.message.chat.first_name, update.message.chat.id, update.message.text)
- #   print(update.message)
-#    update.message.reply_text(user_text)   
+def create_adm_dict():
+    #Random choice for ADM
+    #Working with all_user_data dictionary with {User_Name: User_ID}
+    adm_base = {}
+    nicks = []
+    for nick in all_user_data.keys():
+        nicks.append(nick)
+        print(nicks)
+    while len(adm_base) != len(nicks):
+        from_msg = random.choice(nicks)
+        to_msg = random.choice(nicks)
+        #Verify if from_user == to_user
+        if to_msg == from_msg:
+            print("Wrong situation! We can't send the message to ourselves'")
+            continue
+        # Verify if from_useralready has the to_user
+        if adm_base.get(from_msg):
+            print("Ookey! This user already is ADM!")
+            continue
+        adm_base[from_msg] = to_msg
+        
+    print(adm_base)
+    
+    
+    
+#    button_adm = KeyboardButton('Want ADM!')
+#    button_leave = KeyboardButton('Want to Leave!')
+#    member_kb = ReplyKeyboardMarkup([
+#                                    [button_adm],[button_leave]
+#                                    ], resize_keyboard=True
+#                                    )
+#    update.message.reply_text('Hello everyones! Please, choose!', reply_markup=member_kb)
+
  #   try:
  #       bot.send_message(update.message.from_user.id, "You wrote smth?")
  #   except(Unauthorized):
  #       print("Santa-Claus bot was blocked by the user: %s %s" %(update.message.from_user.first_name, update.message.from_user.last_name))
         
-    
 
-def user_dict(key, val, remove=False):
-    members = {}
-    list = []
-    if remove==False:
-        members[key] = val      
-        list.append(members)
-#        if key not in members.keys():
-#            list[key] = val
-    elif remove==True:
-        try:
-            del members[key]
-        except KeyError:
-            print('Key is not in members!')
-    print (list)
+
 
 
 
