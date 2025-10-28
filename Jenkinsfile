@@ -11,7 +11,7 @@ pipeline {
 
         stage('shell') {
           steps {
-            sh 'sh \'echo Hello from Shell\''
+            sh 'sh \'echo "Hello from Shell"\''
           }
         }
 
