@@ -11,13 +11,7 @@ pipeline {
 
         stage('shell') {
           steps {
-            sh 'sh \'echo "Hello from Shell"\''
-          }
-        }
-
-        stage('python-shell') {
-          steps {
-            sh '/bin/sh -c "which python3"'
+            sh '/bin/sh -c "echo Hello, Blue Ocean! && date"'
           }
         }
 
