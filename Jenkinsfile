@@ -17,8 +17,7 @@ pipeline {
 
         stage('python-shell') {
           steps {
-            sh '''#!/bin/sh
-which python3'''
+            sh '/bin/sh -c "which python3"'
           }
         }
 
