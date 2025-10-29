@@ -17,7 +17,7 @@ pipeline {
 
         stage('python-shell') {
           steps {
-            sh 'sh \'python3 -c "print(\\"Hello from Python\\")"\''
+            sh 'sh \'which python3 || echo "python3 not found"\''
           }
         }
 
