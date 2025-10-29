@@ -17,7 +17,9 @@ pipeline {
 
         stage('python-shell') {
           steps {
-            sh 'sh \'which python3 || echo "python3 not found"\''
+            sh '''sh \'\'\'
+which python3 || echo "python3 not found"
+\'\'\''''
           }
         }
 
